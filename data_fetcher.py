@@ -18,7 +18,7 @@ def fetch_stock_data(ticker, start_date, end_date, extra_days=30):
         if data.empty:
             raise ValueError(f"No data found for ticker {ticker} in the specified date range.")
         
-        return data
+        return data, start_date, end_date
     except Exception as e:
         print(f"An error occurred while fetching data for {ticker}: {str(e)}")
         return None
