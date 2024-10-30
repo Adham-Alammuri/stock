@@ -18,7 +18,13 @@ def fetch_stock_data(ticker, start_date, end_date, extra_days=30):
         if data.empty:
             raise ValueError(f"No data found for ticker {ticker} in the specified date range.")
         
-        return data, start_date, end_date
+        # Ensure the DataFrame has all required columns
+        required_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
+        if not all(col in data.columns for col in required_columns):
+            raise ValueError(f"Downloaded data missing required columns. Columns found: {data.columns}")
+            
+        return data
+        
     except Exception as e:
         print(f"An error occurred while fetching data for {ticker}: {str(e)}")
         return None
