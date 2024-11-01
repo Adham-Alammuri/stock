@@ -192,15 +192,24 @@ class StockAnalyzer:
     def calculate_relative_volume(self, window: int = 20) -> pd.Series:
         """
         Calculate volume relative to its moving average.
+        Handles edge cases of zero volume or zero moving average.
         
         Args:
             window: Moving average window length
             
         Returns:
-            Series containing relative volume values
+            Series containing relative volume values, minimum value of 0.0001
         """
         volume_ma = self.data['Volume'].rolling(window=window).mean()
-        return self.data['Volume'] / volume_ma    
+        
+        # Avoid division by zero
+        volume_ma = volume_ma.replace(0, np.nan)
+        relative_vol = self.data['Volume'] / volume_ma
+        
+        # Replace inf, -inf, and nan with 0.0001 (very low relative volume)
+        relative_vol = relative_vol.replace([np.inf, -np.inf, np.nan], 0.0001)
+        
+        return relative_vol
     
     def calculate_momentum(self, periods: List[int] = [5, 10, 20, 50]) -> Dict[str, pd.Series]:
         """

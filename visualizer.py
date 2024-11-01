@@ -216,3 +216,78 @@ class StockVisualizer:
             }
 
         return data
+    
+
+    def plot_clustering_analysis(self, clusters, returns) -> Dict:
+        """
+        Prepare Clustering data for web based output
+        
+        Args:
+            clusters: Cluster assignments
+            returns: Return data
+            
+        Returns:
+            Dictionary with plot data for web rendering
+        """
+        plot_data = []
+        
+        for cluster in range(clusters.max() + 1):
+            mask = clusters == cluster
+            plot_data.append({
+                'cluster': int(cluster),
+                'dates': returns.index[mask].strftime('%Y-%m-%d').tolist(),
+                'returns': returns[mask].tolist(),
+                'mean_return': float(returns[mask].mean()),
+                'total_points': int(mask.sum())
+            })
+            
+        return {
+            'plot_type': 'cluster_analysis',
+            'data': plot_data,
+            'metadata': {
+                'total_clusters': int(clusters.max() + 1),
+                'total_points': len(returns)
+            }
+        }
+        
+    def generate_performance_dashboard(self, metrics: Dict) -> Dict:
+        """
+        Prepare performance dashboard for web based output
+        
+        Args:
+            metrics: Dictionary of strategy metrics including return series
+            
+        Returns:
+            Dictionary with dashboard data for web rendering
+        """
+        return {
+            'dashboard_type': 'strategy_performance',
+            'metrics': {
+                'returns': {
+                    'value': float(metrics['mean_return']),
+                    'formatted': f"{metrics['mean_return']:.2%}",
+                    'label': 'Average Return'
+                },
+                'sharpe': {
+                    'value': float(metrics['sharpe_ratio']),
+                    'formatted': f"{metrics['sharpe_ratio']:.2f}",
+                    'label': 'Sharpe Ratio'
+                },
+                'win_rate': {
+                    'value': float(metrics['win_rate']),
+                    'formatted': f"{metrics['win_rate']:.2%}",
+                    'label': 'Win Rate'
+                },
+                'max_drawdown': {
+                    'value': float(metrics['max_drawdown']),
+                    'formatted': f"{metrics['max_drawdown']:.2%}",
+                    'label': 'Maximum Drawdown'
+                }
+            },
+            'chart_data': {
+                'cumulative_returns': {
+                    'dates': metrics['return_series'].index.strftime('%Y-%m-%d').tolist(),
+                    'values': metrics['cumulative_returns'].tolist()
+                }
+            }
+        }
