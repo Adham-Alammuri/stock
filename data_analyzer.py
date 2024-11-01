@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Dict, List
 
 class StockAnalyzer:
     def __init__(self, data: pd.DataFrame, start_date: Optional[str] = None, end_date: Optional[str] = None):
@@ -165,3 +165,86 @@ class StockAnalyzer:
         annualized_vol = rolling_std * np.sqrt(252)
 
         return annualized_vol.iloc[-1], annualized_vol
+    
+    def calculate_garman_klass_volatility(self) -> pd.Series:
+        """
+        Calculate Garman-Klass volatility, which provides a more accurate volatility
+        estimate using OHLC prices. 
+        
+        Returns:
+            Series containing Garman-Klass volatility values
+        """
+        return (
+            (np.log(self.data['High']) - np.log(self.data['Low'])).pow(2) / 2 -
+            (2 * np.log(2) - 1) * 
+            (np.log(self.data['Close']) - np.log(self.data['Open'])).pow(2)
+        )
+
+    def calculate_dollar_volume(self) -> pd.Series:
+        """
+        Calculate dollar volume, a measure of trading activity.
+        
+        Returns:
+            Series containing dollar volume values in millions
+        """
+        return (self.data['Close'] * self.data['Volume']) / 1e6
+
+    def calculate_relative_volume(self, window: int = 20) -> pd.Series:
+        """
+        Calculate volume relative to its moving average.
+        
+        Args:
+            window: Moving average window length
+            
+        Returns:
+            Series containing relative volume values
+        """
+        volume_ma = self.data['Volume'].rolling(window=window).mean()
+        return self.data['Volume'] / volume_ma    
+    
+    def calculate_momentum(self, periods: List[int] = [5, 10, 20, 50]) -> Dict[str, pd.Series]:
+        """
+        Calculate price momentum over multiple timeframes.
+        
+        Args:
+            periods: List of periods to calculate momentum for
+            
+        Returns:
+            Dictionary with momentum values for each period
+        """
+        momentum = {}
+        for period in periods:
+            momentum[f'momentum_{period}d'] = self.data['Close'].pct_change(periods=period)
+        return momentum
+    
+    def prepare_features_for_clustering(self) -> pd.DataFrame:
+        """
+        Prepare complete feature set for clustering analysis.
+        
+        Returns:
+            DataFrame with all features combined
+        """
+        features = pd.DataFrame(index=self.data.index)
+        
+        # Add price features
+        features['return_1d'] = self.daily_returns
+        features['vol'] = self.calculate_volatility()[1]
+        
+        # Add momentum features
+        momentum_dict = self.calculate_momentum()
+        for name, values in momentum_dict.items():
+            features[name] = values
+        
+        # Add technical indicators
+        features['rsi'] = self.calculate_rsi()
+        bb = self.calculate_bollinger_bands()
+        features['bb_position'] = (self.data['Close'] - bb['BB_Lower']) / (bb['BB_Upper'] - bb['BB_Lower'])
+        
+        # Add volume features
+        features['dollar_volume'] = self.calculate_dollar_volume()
+        features['relative_volume'] = self.calculate_relative_volume()
+        
+        # Add volatility
+        features['garman_klass_vol'] = self.calculate_garman_klass_volatility()
+        
+        return features.dropna()
