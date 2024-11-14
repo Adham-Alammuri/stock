@@ -119,6 +119,46 @@ class StockVisualizer:
         
         else:
             return self.prepare_candlestick_data(indicators)
+    
+    def prepare_technical_data(self, indicators: List[str]) -> Dict:
+        """
+        Prepare technical analysis dashboard data for web visualization.
+        
+        Args:
+            indicators: List of indicators to include in the data
+            
+        Returns:
+            Dictionary with formatted technical analysis data
+        """       
+        data = {
+            'dates': self.analyzer.data.index.strftime('%Y-%m-%d').tolist(),
+            'price': self.analyzer.data['Close'].tolist(),
+            'volume': self.analyzer.data['Volume'].tolist(),
+            'indicators': {}
+        }
+
+        if 'sma' in indicators:
+            data['indicators']['sma'] = {
+                'sma20': self.analyzer.calculate_sma(20).tolist(),
+                'sma50': self.analyzer.calculate_sma(50).tolist()
+            }
+            
+        if 'bb' in indicators:
+            bb = self.analyzer.calculate_bollinger_bands()
+            data['indicators']['bollinger'] = {
+                'upper': bb['BB_Upper'].tolist(),
+                'middle': bb['BB_Middle'].tolist(),
+                'lower': bb['BB_Lower'].tolist()
+            }
+            
+        if 'rsi' in indicators:
+            data['indicators']['rsi'] = {
+                'values': self.analyzer.calculate_rsi().tolist(),
+                'overbought': 70,
+                'oversold': 30
+            }
+
+        return data
         
     def plot_technical_analysis(self, indicators: List[str] = ['sma', 'ema', 'bb', 'rsi'], output_format: str = 'matplotlib') -> Union[None, Dict]:
         """

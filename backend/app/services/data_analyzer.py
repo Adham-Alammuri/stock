@@ -228,32 +228,51 @@ class StockAnalyzer:
     
     def prepare_features_for_clustering(self) -> pd.DataFrame:
         """
-        Prepare complete feature set for clustering analysis.
-        
-        Returns:
-            DataFrame with all features combined
+        Prepare complete feature set for clustering analysis with proper error handling
         """
         features = pd.DataFrame(index=self.data.index)
         
-        # Add price features
-        features['return_1d'] = self.daily_returns
-        features['vol'] = self.calculate_volatility()[1]
+        # Basic price features
+        features['return_1d'] = self.daily_returns.fillna(0)
         
-        # Add momentum features
+        # Get volatility (handle potential errors)
+        try:
+            _, vol_series = self.calculate_volatility()
+            features['vol'] = vol_series.fillna(method='ffill')
+        except Exception as e:
+            features['vol'] = 0
+            print(f"Error calculating volatility: {e}")
+        
+        # Momentum features (with error handling)
         momentum_dict = self.calculate_momentum()
-        for name, values in momentum_dict.items():
-            features[name] = values
+        if '20d' in momentum_dict:
+            features['momentum_20d'] = momentum_dict['momentum_20d'].fillna(0)
+        else:
+            features['momentum_20d'] = 0
         
-        # Add technical indicators
-        features['rsi'] = self.calculate_rsi()
-        bb = self.calculate_bollinger_bands()
-        features['bb_position'] = (self.data['Close'] - bb['BB_Lower']) / (bb['BB_Upper'] - bb['BB_Lower'])
+        # Technical indicators
+        features['rsi'] = self.calculate_rsi().fillna(50)  # Neutral RSI for missing values
         
-        # Add volume features
-        features['dollar_volume'] = self.calculate_dollar_volume()
-        features['relative_volume'] = self.calculate_relative_volume()
+        # Bollinger Band position
+        try:
+            bb = self.calculate_bollinger_bands()
+            features['bb_position'] = ((self.data['Close'] - bb['BB_Lower']) / 
+                                    (bb['BB_Upper'] - bb['BB_Lower'])).fillna(0.5)
+        except Exception:
+            features['bb_position'] = 0.5  # Neutral position
         
-        # Add volatility
-        features['garman_klass_vol'] = self.calculate_garman_klass_volatility()
+        # Volume features
+        features['dollar_volume'] = self.calculate_dollar_volume().fillna(method='ffill')
+        features['relative_volume'] = self.calculate_relative_volume().fillna(1)
         
+        # Volatility
+        features['garman_klass_vol'] = self.calculate_garman_klass_volatility().fillna(method='ffill')
+        
+        # Forward fill any remaining NaNs and drop any that still exist
+        features = features.fillna(method='ffill').fillna(method='bfill')
+        
+        # Ensure we have enough valid data
+        if len(features.dropna()) < 20:  # Minimum required for meaningful clustering
+            raise ValueError("Not enough valid data points for clustering")
+            
         return features.dropna()
