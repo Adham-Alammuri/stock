@@ -258,35 +258,69 @@ class StockVisualizer:
         return data
     
 
-    def plot_clustering_analysis(self, clusters, returns) -> Dict:
+    def plot_clustering_analysis(self, clusters, returns, features: Optional[pd.DataFrame] = None) -> Dict:
         """
-        Prepare Clustering data for web based output
+        clustering visualization
         
         Args:
             clusters: Cluster assignments
             returns: Return data
+            features: Optional DataFrame with additional features for analysis
             
         Returns:
-            Dictionary with plot data for web rendering
+            Dictionary with enhanced plot data for web rendering
         """
         plot_data = []
         
         for cluster in range(clusters.max() + 1):
             mask = clusters == cluster
-            plot_data.append({
+            cluster_returns = returns[mask]
+            
+            cluster_info = {
                 'cluster': int(cluster),
                 'dates': returns.index[mask].strftime('%Y-%m-%d').tolist(),
-                'returns': returns[mask].tolist(),
-                'mean_return': float(returns[mask].mean()),
-                'total_points': int(mask.sum())
-            })
+                'returns': cluster_returns.tolist(),
+                'mean_return': float(cluster_returns.mean()),
+                'total_points': int(mask.sum()),
+                'metrics': {
+                    'sharpe': float(cluster_returns.mean() / cluster_returns.std()) if cluster_returns.std() != 0 else 0,
+                    'win_rate': float((cluster_returns > 0).mean()),
+                    'volatility': float(cluster_returns.std() * np.sqrt(252))
+                }
+            }
             
+            # Add feature analysis if features are provided
+            if features is not None:
+                cluster_features = features[mask]
+                cluster_info['features'] = {
+                    'rsi': {
+                        'mean': float(cluster_features['rsi'].mean()),
+                        'range': [
+                            float(cluster_features['rsi'].min()),
+                            float(cluster_features['rsi'].max())
+                        ]
+                    },
+                    'volatility': {
+                        'mean': float(cluster_features['vol'].mean()),
+                        'range': [
+                            float(cluster_features['vol'].min()),
+                            float(cluster_features['vol'].max())
+                        ]
+                    }
+                }
+            
+            plot_data.append(cluster_info)
+        
         return {
             'plot_type': 'cluster_analysis',
             'data': plot_data,
             'metadata': {
                 'total_clusters': int(clusters.max() + 1),
-                'total_points': len(returns)
+                'total_points': len(returns),
+                'period': {
+                    'start': returns.index.min().strftime('%Y-%m-%d'),
+                    'end': returns.index.max().strftime('%Y-%m-%d')
+                }
             }
         }
         

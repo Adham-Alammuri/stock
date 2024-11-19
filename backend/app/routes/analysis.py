@@ -63,5 +63,5 @@ async def get_stock_analysis(
         }
         
     except Exception as e:
-        print(f"Error details: {str(e)}")  # Add this for debugging
+        print(f"Error details: {str(e)}")  
         raise HTTPException(status_code=500, detail=str(e))

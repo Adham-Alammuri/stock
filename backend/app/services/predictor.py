@@ -62,16 +62,17 @@ class UnsupervisedStrategyAnalyzer(BasePredictor):
         self.data['cluster'] = self.clusters
         for cluster in range(self.n_clusters):
             cluster_returns = self.data[self.data['cluster'] == cluster]['return_1d']
-            self.cluster_performance[cluster] = {
-                'mean_return': cluster_returns.mean(),
-                'sharpe': cluster_returns.mean() / cluster_returns.std(),
-                'size': len(cluster_returns)
-            }
+            if len(cluster_returns) > 0:
+                self.cluster_performance[cluster] = {
+                    'mean_return': cluster_returns.mean(),
+                    'sharpe': (cluster_returns.mean() / cluster_returns.std()) if cluster_returns.std() != 0 else 0,
+                    'size': len(cluster_returns),
+                    'win_rate': (cluster_returns > 0).mean()
+                }
     
-            
     def predict(self) -> pd.Series:
         """
-        Generate predictions based on cluster membership.
+        Generate predictions based on cluster membership with enhanced criteria.
         
         Returns:
             Series with predicted returns
@@ -79,13 +80,35 @@ class UnsupervisedStrategyAnalyzer(BasePredictor):
         if self.clusters is None:
             raise ValueError("Model needs to be trained first")
             
-        # Identify best performing cluster based on Sharpe ratio
-        best_cluster = max(self.cluster_performance.items(),
-                          key=lambda x: x[1]['sharpe'])[0]
-                          
-        # Generate predictions (1 for stocks in best cluster, 0 otherwise)
         predictions = pd.Series(0, index=self.data.index)
-        predictions[self.data['cluster'] == best_cluster] = 1
+        
+        # Find good clusters based on multiple criteria
+        good_clusters = []
+        for cluster, stats in self.cluster_performance.items():
+            # Minimum cluster size check
+            if stats['size'] < 5:
+                continue
+                
+            # Performance criteria
+            good_performance = (
+                stats['sharpe'] > 0.2 and  # Reasonable Sharpe ratio
+                stats['mean_return'] > 0 and  # Positive returns
+                stats['win_rate'] > 0.45  # Decent win rate
+            )
+            
+            if good_performance:
+                good_clusters.append(cluster)
+        
+        # Generate signals for good clusters
+        for cluster in good_clusters:
+            cluster_mask = self.data['cluster'] == cluster
+            
+            # Add basic risk filters
+            rsi_filter = (self.data['rsi'] > 30) & (self.data['rsi'] < 70)
+            vol_filter = self.data['vol'] <= self.data['vol'].mean() * 1.5
+            
+            # Combined signal
+            predictions[cluster_mask & rsi_filter & vol_filter] = 1
         
         return predictions
         
@@ -115,12 +138,12 @@ class UnsupervisedStrategyAnalyzer(BasePredictor):
         metrics.update({
             'strategy_metrics': {
                 'mean_return': strategy_returns.mean(),
-                'sharpe_ratio': strategy_returns.mean() / strategy_returns.std(),
+                'sharpe_ratio': strategy_returns.mean() / strategy_returns.std() if strategy_returns.std() != 0 else 0,
                 'win_rate': (strategy_returns > 0).mean(),
                 'max_drawdown': (cumulative_returns - 
                             cumulative_returns.expanding().max()).min(),
-                'return_series': strategy_returns,  # Add return series
-                'cumulative_returns': cumulative_returns  # Optional: add cumulative too
+                'return_series': strategy_returns,
+                'cumulative_returns': cumulative_returns
             }
         })
         

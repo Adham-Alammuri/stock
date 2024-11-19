@@ -13,3 +13,14 @@ env/
 # IDE
 .vscode/
 .idea/
+
+# Frontend dependencies
+frontend/node_modules/
+frontend/dist/
+frontend/build/
+frontend/.env
+
+# Frontend misc
+frontend/*.local
+frontend/coverage/
+frontend/package-lock.json
