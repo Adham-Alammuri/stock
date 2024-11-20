@@ -245,7 +245,7 @@ class StockAnalyzer:
         
         # Momentum features (with error handling)
         momentum_dict = self.calculate_momentum()
-        if '20d' in momentum_dict:
+        if 'momentum_20d' in momentum_dict:
             features['momentum_20d'] = momentum_dict['momentum_20d'].fillna(0)
         else:
             features['momentum_20d'] = 0

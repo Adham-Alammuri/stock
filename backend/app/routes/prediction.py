@@ -6,6 +6,7 @@ import numpy as np
 from app.services.data_fetcher import fetch_stock_data
 from app.services.data_analyzer import StockAnalyzer
 from app.services.predictor import UnsupervisedStrategyAnalyzer, StockPredictor
+from app.services.visualizer import StockVisualizer
 
 router = APIRouter()
 
@@ -160,6 +161,14 @@ async def get_stock_prediction(
         recent_preds = predictions[-20:]
         recent_returns = returns[-20:]
         recent_metrics = calculate_strategy_metrics(recent_preds, recent_returns)
+
+        # Generate clustering visualization
+        visualizer = StockVisualizer(analyzer)
+        clustering_viz = visualizer.plot_clustering_analysis(
+            clusters=strategy.clusters,
+            returns=features['return_1d'],
+            features=features
+        )
         
         # Prepare response
         response = {
@@ -185,7 +194,7 @@ async def get_stock_prediction(
                         "annual_return": f"Expected yearly return based on {strategy_metrics['total_trades']} trades",
                         "win_rate": f"Won {strategy_metrics['winning_trades']} out of {strategy_metrics['total_trades']} trades",
                         "max_drawdown": "Largest peak-to-trough decline",
-                        "total_trades": "Number of BUY signals generated"
+                        "total_trades": "Number of trade signals generated"
                     }
                 },
                 "baseline_comparison": {
@@ -219,7 +228,9 @@ async def get_stock_prediction(
                         "volatility": "Market volatility (higher values indicate more risk)",
                         "momentum": "20-day price momentum (positive values indicate upward trend)"
                     }
-                }
+                },
+                "clustering_visualization": clustering_viz 
+
             }
         }
         
