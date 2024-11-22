@@ -365,26 +365,31 @@ function App() {
             )}
           </div>
         ) : (
-          <div className="bg-white p-6 rounded-lg shadow-md">
-            {chartQuery.isLoading && (
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
-                <p className="mt-2">Loading chart data...</p>
+          <>
+            {(chartQuery.isLoading || chartQuery.error || chartQuery.data) && (
+              <div className="bg-white p-6 rounded-lg shadow-md">
+                {chartQuery.isLoading && (
+                  <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
+                    <p className="mt-2">Loading chart data...</p>
+                  </div>
+                )}
+                
+                {chartQuery.error && (
+                  <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                    Error: {chartQuery.error.message}
+                  </div>
+                )}
+                
+                {chartQuery.data && (
+                  <div className="space-y-4">
+                    <h2 className="text-xl font-bold">Technical Analysis</h2>
+                    <StockChart data={chartQuery.data.data} />
+                  </div>
+                )}
               </div>
             )}
-            {chartQuery.error && (
-              <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-                Error: {chartQuery.error.message}
-              </div>
-            )}
-          {chartQuery.data && (
-            <div className="space-y-4">
-              <h2 className="text-xl font-bold">Technical Analysis</h2>
-              {}
-              <StockChart data={chartQuery.data.data} />
-            </div>
-          )}
-          </div>
+          </>
         )}
       </div>
     </div>
