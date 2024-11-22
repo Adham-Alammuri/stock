@@ -129,7 +129,7 @@ async def get_stock_prediction(
         # Fetch and validate data
         data = fetch_stock_data(ticker, calc_start, end_dt)
         if data is None or data.empty:
-            raise HTTPException(status_code=404, detail=f"No data found for {ticker}")
+            raise HTTPException(status_code=404, detail=f"Could not find any data for ticker '{ticker}'. Please verify the ticker symbol is correct.")
             
         # Prepare features
         analyzer = StockAnalyzer(data)

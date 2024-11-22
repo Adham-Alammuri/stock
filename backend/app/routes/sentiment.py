@@ -1,13 +1,17 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Header
 from app.services.sentiment_data import SentimentDataFetcher, SentimentProcessor
 from datetime import datetime, timedelta
 
 router = APIRouter()
 
 @router.get("/{ticker}/analyze")
-async def analyze_sentiment(ticker: str):
+async def analyze_sentiment(
+    ticker: str,
+    x_api_key: str = Header(..., alias="X-API-KEY")
+):
     try:
-        fetcher = SentimentDataFetcher()
+        # Initialize fetcher with provided API key instead of environment variable
+        fetcher = SentimentDataFetcher(api_key=x_api_key)
         processor = SentimentProcessor(ticker)
         
         print(f"Fetching sentiment data for {ticker}")
@@ -17,7 +21,14 @@ async def analyze_sentiment(ticker: str):
         if 'Information' in raw_data and 'rate limit' in raw_data['Information'].lower():
             raise HTTPException(
                 status_code=429,  # Too Many Requests status code
-                detail="Alpha Vantage API rate limit reached. Please try again tomorrow or upgrade to a premium plan."
+                detail="Alpha Vantage API rate limit reached (25 calls per day). Please try again tomorrow or use a different API key."
+            )
+        
+        # Check for invalid API key response
+        if 'Error Message' in raw_data and 'Invalid API call' in raw_data['Error Message']:
+            raise HTTPException(
+                status_code=401,  # Unauthorized status code
+                detail="Invalid API key. Please check your API key and try again."
             )
         
         if not raw_data or 'feed' not in raw_data:

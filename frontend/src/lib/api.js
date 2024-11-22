@@ -9,6 +9,9 @@ export const StockAPI = {
       const response = await axios.get(`${API_URL}/api/prediction/${ticker}/predict`);
       return response.data;
     } catch (error) {
+        if (error.response?.status === 404) {
+            throw new Error(`Could not find any data for ticker '${ticker}'. Please verify the ticker symbol is correct.`);
+        }
       console.error('API Error:', error);
       throw error;
     }
@@ -24,11 +27,21 @@ export const StockAPI = {
     }
   },
 
-  getSentimentAnalysis: async ({ ticker }) => {
+  getSentimentAnalysis: async ({ ticker, apiKey }) => {
     try {
-      const response = await axios.get(`${API_URL}/api/sentiment/${ticker}/analyze`);
+      const response = await axios.get(`${API_URL}/api/sentiment/${ticker}/analyze`, {
+        headers: {
+          'X-API-KEY': apiKey
+        }
+      });
       return response.data;
     } catch (error) {
+      if (error.response?.status === 429) {
+        throw new Error(error.response.data.detail);
+      }
+      if (error.response?.status === 401) {
+        throw new Error('Invalid API key. Please check your API key and try again.');
+      }
       console.error('API Error:', error);
       throw error;
     }

@@ -6,6 +6,7 @@ import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import "react-datepicker/dist/react-datepicker.css"
 import ClusterChart from './components/ClusterChart';
 import StockChart from './components/TechnicalChart';
+import ApiKeyManager from './components/ApiKeyManager';
 
 const SignalIcon = ({ signal }) => {
   if (signal?.includes('BUY')) {
@@ -31,6 +32,7 @@ function App() {
     endDate: null,
   })
   
+  const [apiKey, setApiKey] = useState(null)
   const [activeView, setActiveView] = useState('prediction')
 
   const handleInputChange = (field, value) => {
@@ -62,8 +64,11 @@ function App() {
 
   const sentimentQuery = useQuery({
     queryKey: ['sentiment', submittedValues.ticker],
-    queryFn: () => StockAPI.getSentimentAnalysis({ ticker: submittedValues.ticker }),
-    enabled: !!submittedValues.ticker,
+    queryFn: () => StockAPI.getSentimentAnalysis({ 
+      ticker: submittedValues.ticker,
+      apiKey
+    }),
+    enabled: !!submittedValues.ticker && !!apiKey, // Only run if we have both ticker and API key
   })
 
   const handleSubmit = (e) => {
@@ -107,7 +112,8 @@ function App() {
             </button>
           </div>
         </div>
-        
+        {/* Api Key Manager */}
+        <ApiKeyManager onApiKeyChange={setApiKey} />
         {/* Form Section */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -246,14 +252,20 @@ function App() {
                   {/* Sentiment Analysis Card */}
                   <div className="bg-white p-6 rounded-lg shadow-md">
                     <h2 className="text-xl font-bold mb-4">Sentiment Analysis</h2>
-                    {sentimentQuery.isLoading ? (
+                    {!apiKey ? (
+                      <div className="text-center p-4 bg-gray-50 rounded-lg">
+                        <p className="text-gray-600">
+                          Please configure your Alpha Vantage API key above to view sentiment analysis
+                        </p>
+                      </div>
+                    ) : sentimentQuery.isLoading ? (
                       <div className="text-center">
                         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
                         <p className="mt-2">Loading sentiment data...</p>
                       </div>
                     ) : sentimentQuery.error?.response?.status === 429 ? (
                       <div className="bg-yellow-100 border border-yellow-400 text-yellow-700 px-4 py-3 rounded">
-                        Alpha Vantage API rate limit reached. Please try again tomorrow or upgrade to a premium plan.
+                        Alpha Vantage API rate limit reached (25 calls per day). Please try again tomorrow or use a different API key.
                       </div>
                     ) : sentimentQuery.error ? (
                       <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">

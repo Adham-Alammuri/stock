@@ -11,10 +11,10 @@ class SentimentDataFetcher:
     """
     Fetches sentiment data from Alpha Vantage API.
     """
-    def __init__(self):
-        self.api_key = os.getenv('ALPHA_VANTAGE')
+    def __init__(self, api_key: Optional[str] = None):
+        self.api_key = api_key or os.getenv('ALPHA_VANTAGE')
         if not self.api_key:
-            raise ValueError("API key could not be found")
+            raise ValueError("API key is required")
         
         self.base_url = 'https://www.alphavantage.co/query'
 
