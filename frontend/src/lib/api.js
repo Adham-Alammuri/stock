@@ -14,19 +14,12 @@ export const StockAPI = {
     }
   },
 
-
-  getChartData: async ({ ticker, start_date, end_date }) => {
+  getChartData: async ({ ticker }) => {
     try {
-      const params = new URLSearchParams({
-        output_format: 'mpld3',
-        ...(start_date && { start_date }),
-        ...(end_date && { end_date })
-      });
-      
-      const response = await axios.get(`${API_URL}/api/visualization/${ticker}/chart?${params}`);
+      const response = await axios.get(`${API_URL}/api/visualization/${ticker}/chart`);
       return response.data;
     } catch (error) {
-      console.error('Chart API Error:', error);
+      console.error('API Error:', error);
       throw error;
     }
   },
