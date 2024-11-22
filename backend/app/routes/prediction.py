@@ -18,12 +18,13 @@ def calculate_strategy_metrics(predictions: pd.Series, returns: pd.Series) -> Di
     
     if total_trades == 0:
         return {
-            "sharpe_ratio": 0.0,
-            "annual_return": 0.0,
-            "win_rate": 0.0,
-            "max_drawdown": 0.0,
+            "sharpe_ratio": "None",
+            "annual_return": "None",
+            "win_rate": "None",
+            "max_drawdown": "None",
             "total_trades": 0,
-            "winning_trades": 0
+            "winning_trades": 0,
+            "strategy_status": "HOLD - No trading signals produced in the last 20 trading days"
         }
     
     # Calculate win rate
@@ -170,6 +171,15 @@ async def get_stock_prediction(
             features=features
         )
         
+        def clean_nan(obj):
+            if isinstance(obj, dict):
+                return {k: clean_nan(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [clean_nan(x) for x in obj]
+            elif isinstance(obj, float):
+                return 0.0 if np.isnan(obj) else obj
+            return obj
+        
         # Prepare response
         response = {
             "success": True,
@@ -234,7 +244,9 @@ async def get_stock_prediction(
             }
         }
         
-        return response
+        cleaned_response = clean_nan(response)
+
+        return cleaned_response
         
     except Exception as e:
         print(f"Prediction error: {str(e)}")

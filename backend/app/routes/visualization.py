@@ -18,13 +18,8 @@ async def get_chart_data(
     ticker: str,
     start_date: Optional[str] = Query(None, description="Start date (YYYY-MM-DD)"),
     end_date: Optional[str] = Query(None, description="End date (YYYY-MM-DD)"),
-    chart_type: Optional[str] = Query("candlestick", description="Chart type (candlestick or technical)"),
-    indicators: Optional[List[str]] = Query(
-        default=['sma', 'bb', 'rsi'],
-        description="Technical indicators (sma, bb, rsi)"
-    )
 ):
-    """Get chart data with technical indicators"""
+    """Get chart data with all technical indicators"""
     try:
         # Handle dates
         if not end_date:
@@ -32,7 +27,7 @@ async def get_chart_data(
         else:
             end_dt = pd.to_datetime(end_date)
         if not start_date:
-            start_dt = end_dt - timedelta(days=30)
+            start_dt = end_dt - timedelta(days=365)
         else:
             start_dt = pd.to_datetime(start_date)
             
@@ -46,11 +41,8 @@ async def get_chart_data(
         analyzer = StockAnalyzer(data)
         visualizer = StockVisualizer(analyzer)
         
-        # Get data with indicators calculated
-        if chart_type == "technical":
-            chart_data = visualizer.prepare_technical_data(indicators)
-        else:
-            chart_data = visualizer.prepare_candlestick_data(indicators)
+        # Get all data with indicators calculated
+        chart_data = visualizer.prepare_chart_data()
             
         # Slice data to requested date range
         requested_mask = (
@@ -59,19 +51,24 @@ async def get_chart_data(
             pd.to_datetime(chart_data['dates']) <= end_dt
         )
         
+        # Filter all data using the mask
         chart_data['dates'] = [d for i, d in enumerate(chart_data['dates']) if requested_mask[i]]
         chart_data['ohlc'] = [d for i, d in enumerate(chart_data['ohlc']) if requested_mask[i]]
         chart_data['volume'] = [d for i, d in enumerate(chart_data['volume']) if requested_mask[i]]
         
-        # Slice indicators
-        if 'indicators' in chart_data:
-            for indicator_type in chart_data['indicators']:
-                if isinstance(chart_data['indicators'][indicator_type], dict):
-                    for key in chart_data['indicators'][indicator_type]:
-                        chart_data['indicators'][indicator_type][key] = [
-                            d for i, d in enumerate(chart_data['indicators'][indicator_type][key])
-                            if requested_mask[i]
-                        ]
+        # Filter indicators
+        for indicator_type in chart_data['indicators']:
+            if isinstance(chart_data['indicators'][indicator_type], dict):
+                for key in chart_data['indicators'][indicator_type]:
+                    chart_data['indicators'][indicator_type][key] = [
+                        d for i, d in enumerate(chart_data['indicators'][indicator_type][key])
+                        if requested_mask[i]
+                    ]
+            else:
+                chart_data['indicators'][indicator_type] = [
+                    d for i, d in enumerate(chart_data['indicators'][indicator_type])
+                    if requested_mask[i]
+                ]
             
         return {
             "success": True,

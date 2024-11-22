@@ -5,6 +5,7 @@ import DatePicker from 'react-datepicker'
 import { TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import "react-datepicker/dist/react-datepicker.css"
 import ClusterChart from './components/ClusterChart';
+import StockChart from './components/TechnicalChart';
 
 const SignalIcon = ({ signal }) => {
   if (signal?.includes('BUY')) {
@@ -16,46 +17,65 @@ const SignalIcon = ({ signal }) => {
 };
 
 function App() {
-  const [ticker, setTicker] = useState('')
-  const [submittedTicker, setSubmittedTicker] = useState('')
-  const [analysisMode, setAnalysisMode] = useState('default')
-  const [startDate, setStartDate] = useState(null)
-  const [endDate, setEndDate] = useState(null)
+  const [formState, setFormState] = useState({
+    ticker: '',
+    analysisMode: 'default',
+    startDate: null,
+    endDate: null,
+  })
+  
+  // Separate state for submitted values
+  const [submittedValues, setSubmittedValues] = useState({
+    ticker: '',
+    startDate: null,
+    endDate: null,
+  })
+  
   const [activeView, setActiveView] = useState('prediction')
+
+  const handleInputChange = (field, value) => {
+    setFormState(prev => ({
+      ...prev,
+      [field]: field === 'ticker' ? value.toUpperCase() : value
+    }))
+  }
   
   const predictionQuery = useQuery({
-    queryKey: ['prediction', submittedTicker, startDate, endDate],
+    queryKey: ['prediction', submittedValues.ticker, submittedValues.startDate, submittedValues.endDate],
     queryFn: () => StockAPI.getPrediction({ 
-      ticker: submittedTicker,
-      start_date: startDate?.toISOString().split('T')[0],
-      end_date: endDate?.toISOString().split('T')[0],
+      ticker: submittedValues.ticker,
+      start_date: submittedValues.startDate?.toISOString().split('T')[0],
+      end_date: submittedValues.endDate?.toISOString().split('T')[0],
     }),
-    enabled: !!submittedTicker,
+    enabled: !!submittedValues.ticker,
   })
 
   const chartQuery = useQuery({
-    queryKey: ['chart', submittedTicker, startDate, endDate],
+    queryKey: ['chart', submittedValues.ticker, submittedValues.startDate, submittedValues.endDate],
     queryFn: () => StockAPI.getChartData({ 
-      ticker: submittedTicker,
-      start_date: startDate?.toISOString().split('T')[0],
-      end_date: endDate?.toISOString().split('T')[0]
+      ticker: submittedValues.ticker,
+      start_date: submittedValues.startDate?.toISOString().split('T')[0],
+      end_date: submittedValues.endDate?.toISOString().split('T')[0],
     }),
-    enabled: !!submittedTicker && activeView === 'visualizer',
+    enabled: !!submittedValues.ticker && activeView === 'visualizer',
+  })
+
+  const sentimentQuery = useQuery({
+    queryKey: ['sentiment', submittedValues.ticker],
+    queryFn: () => StockAPI.getSentimentAnalysis({ ticker: submittedValues.ticker }),
+    enabled: !!submittedValues.ticker,
   })
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    if (ticker) {
-      console.log('Submitting ticker:', ticker)
-      setSubmittedTicker(ticker)
+    if (formState.ticker) {
+      setSubmittedValues({
+        ticker: formState.ticker,
+        startDate: formState.startDate,
+        endDate: formState.endDate,
+      })
     }
   }
-
-  const sentimentQuery = useQuery({
-    queryKey: ['sentiment', submittedTicker],
-    queryFn: () => StockAPI.getSentimentAnalysis({ ticker: submittedTicker }),
-    enabled: !!submittedTicker,
-  });
 
   return (
     <div className="min-h-screen bg-gray-100">
@@ -94,15 +114,15 @@ function App() {
             <div className="flex gap-4">
               <input
                 type="text"
-                value={ticker}
-                onChange={(e) => setTicker(e.target.value.toUpperCase())}
+                value={formState.ticker}
+                onChange={(e) => handleInputChange('ticker', e.target.value)}
                 placeholder="Enter stock ticker (e.g., AAPL)"
                 className="flex-grow p-2 border rounded"
               />
               
               <select 
-                value={analysisMode}
-                onChange={(e) => setAnalysisMode(e.target.value)}
+                value={formState.analysisMode}
+                onChange={(e) => handleInputChange('analysisMode', e.target.value)}
                 className="p-2 border rounded w-40"
               >
                 <option value="default">Default (1 Year)</option>
@@ -110,24 +130,24 @@ function App() {
               </select>
             </div>
             
-            {analysisMode === 'custom' && (
+            {formState.analysisMode === 'custom' && (
               <div className="flex gap-4 justify-center">
                 <div>
                   <label className="block text-sm mb-1">Start Date</label>
                   <DatePicker
-                    selected={startDate}
-                    onChange={setStartDate}
+                    selected={formState.startDate}
+                    onChange={(date) => handleInputChange('startDate', date)}
                     className="p-2 border rounded"
-                    maxDate={endDate || new Date()}
+                    maxDate={formState.endDate || new Date()}
                   />
                 </div>
                 <div>
                   <label className="block text-sm mb-1">End Date</label>
                   <DatePicker
-                    selected={endDate}
-                    onChange={setEndDate}
+                    selected={formState.endDate}
+                    onChange={(date) => handleInputChange('endDate', date)}
                     className="p-2 border rounded"
-                    minDate={startDate}
+                    minDate={formState.startDate}
                     maxDate={new Date()}
                   />
                 </div>
@@ -137,7 +157,7 @@ function App() {
             <button 
               type="submit"
               className="w-full bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 transition-colors"
-              disabled={analysisMode === 'custom' && (!startDate || !endDate)}
+              disabled={formState.analysisMode === 'custom' && (!formState.startDate || !formState.endDate)}
             >
               Analyze
             </button>
@@ -357,12 +377,13 @@ function App() {
                 Error: {chartQuery.error.message}
               </div>
             )}
-            {chartQuery.data && (
-              <div>
-                <h2 className="text-xl font-bold mb-4">Technical Analysis</h2>
-                <pre className="overflow-auto bg-gray-50 p-4 rounded">{JSON.stringify(chartQuery.data, null, 2)}</pre>
-              </div>
-            )}
+          {chartQuery.data && (
+            <div className="space-y-4">
+              <h2 className="text-xl font-bold">Technical Analysis</h2>
+              {}
+              <StockChart data={chartQuery.data.data} />
+            </div>
+          )}
           </div>
         )}
       </div>

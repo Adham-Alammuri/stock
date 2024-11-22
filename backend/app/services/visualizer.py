@@ -115,48 +115,46 @@ class StockVisualizer:
             )
 
             plt.title('Stock Price with technical Indicators')
-            plt.show()
+            return fig
         
         else:
             return self.prepare_candlestick_data(indicators)
     
-    def prepare_technical_data(self, indicators: List[str]) -> Dict:
+    def prepare_chart_data(self, indicators=None):
         """
-        Prepare technical analysis dashboard data for web visualization.
+        Combined preparation method for all chart data including price, volume, and all indicators.
         
         Args:
-            indicators: List of indicators to include in the data
+            indicators: Optional list of indicators (kept for backwards compatibility)
             
         Returns:
-            Dictionary with formatted technical analysis data
-        """       
+            Dictionary containing all chart data and indicators
+        """
         data = {
             'dates': self.analyzer.data.index.strftime('%Y-%m-%d').tolist(),
-            'price': self.analyzer.data['Close'].tolist(),
+            'ohlc': self.analyzer.data[['Open', 'High', 'Low', 'Close']].values.tolist(),
             'volume': self.analyzer.data['Volume'].tolist(),
             'indicators': {}
         }
 
-        if 'sma' in indicators:
-            data['indicators']['sma'] = {
-                'sma20': self.analyzer.calculate_sma(20).tolist(),
-                'sma50': self.analyzer.calculate_sma(50).tolist()
-            }
-            
-        if 'bb' in indicators:
-            bb = self.analyzer.calculate_bollinger_bands()
-            data['indicators']['bollinger'] = {
-                'upper': bb['BB_Upper'].tolist(),
-                'middle': bb['BB_Middle'].tolist(),
-                'lower': bb['BB_Lower'].tolist()
-            }
-            
-        if 'rsi' in indicators:
-            data['indicators']['rsi'] = {
-                'values': self.analyzer.calculate_rsi().tolist(),
-                'overbought': 70,
-                'oversold': 30
-            }
+        # RSI
+        data['indicators']['rsi'] = {
+            'values': self.analyzer.calculate_rsi().tolist()
+        }
+
+        # Moving Averages
+        data['indicators']['sma'] = {
+            'sma20': self.analyzer.calculate_sma(20).tolist(),
+            'sma50': self.analyzer.calculate_sma(50).tolist()
+        }
+
+        # Bollinger Bands
+        bb = self.analyzer.calculate_bollinger_bands()
+        data['indicators']['bollinger'] = {
+            'upper': bb['BB_Upper'].tolist(),
+            'middle': bb['BB_Middle'].tolist(),
+            'lower': bb['BB_Lower'].tolist()
+        }
 
         return data
         
@@ -220,44 +218,10 @@ class StockVisualizer:
                 ax3.fill_between(rsi.index, rsi, 30, where=(rsi<=30), color='g', alpha=0.3)
 
             plt.tight_layout()
-            plt.show()
+            return fig
         else:
             return self._prepare_technical_data(indicators)
     
-    def prepare_candlestick_data(self, indicators: List[str]) -> Dict:
-
-        """
-        Prepare candlestick data for web visualization.
-        
-        Args:
-            indicators: List of indicators to include in the data
-            
-        Returns:
-            Dictionary containing formatted data for web charts
-        """       
-        data = {
-            'dates': self.analyzer.data.index.strftime('%Y-%m-%d').tolist(),
-            'ohlc': self.analyzer.data[['Open', 'High', 'Low', 'Close']].values.tolist(),
-            'volume': self.analyzer.data['Volume'].tolist(),
-            'indicators': {}
-        }
-
-        if 'sma' in indicators:
-            data['indicators']['sma'] = {
-                'sma20': self.analyzer.calculate_sma(20).tolist(),
-                'sma50': self.analyzer.calculate_sma(50).tolist(),
-            }
-        if 'bb' in indicators:
-            bb = self.analyzer.calculate_bollinger_bands()
-            data['indicators']['bollinger'] = {
-                'upper':  bb['BB_Upper'].tolist(),
-                'middle': bb['BB_Middle'].tolist(),
-                'lower:': bb['BB_Lower'].tolist()
-            }
-
-        return data
-    
-
     def plot_clustering_analysis(self, clusters, returns, features: Optional[pd.DataFrame] = None) -> Dict:
         """
         clustering visualization
