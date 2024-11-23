@@ -4,5 +4,5 @@ services:
     runtime: python
     rootDirectory: backend
     plan: free
-    buildCommand: pwd && ls -la && pip install -r requirements.txt
+    buildCommand: cd backend && pip install -r requirements.txt
     startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
