@@ -6,7 +6,7 @@ app = FastAPI(title="Stock Analysis API")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173", "https://adhamalammuri.com", "https://www.adhamalammuri.com"],  
+    allow_origins=["http://localhost:3000", "http://localhost:5173", "https://adhamalammuri.com", "https://www.adhamalammuri.com", "https://stock.adhamalammuri.com"],  
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
