@@ -1,7 +1,7 @@
 // src/lib/api.js
 import axios from 'axios';
 
-const API_URL = 'https://stock.adhamalammuri.com';
+const API_URL = 'https://stock-analysis-backend-9ly4.onrender.com';
 
 export const StockAPI = {
   getPrediction: async ({ ticker }) => {
