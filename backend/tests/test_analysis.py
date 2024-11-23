@@ -1,8 +1,14 @@
 from fastapi.testclient import TestClient
 from datetime import datetime, timedelta
 import pytest
-from app.main import app
+import sys
+import os
+from pathlib import Path
 
+backend_dir = Path(__file__).parent.parent
+sys.path.append(str(backend_dir))
+
+from main import app
 client = TestClient(app)
 
 def test_basic_analysis():
@@ -29,7 +35,7 @@ def test_basic_analysis():
 def test_analysis_with_dates():
     """Test analysis endpoint with specific date range"""
     end_date = datetime.now()
-    start_date = end_date - timedelta(days=60)  # Longer period for testing
+    start_date = end_date - timedelta(days=60)  
     
     response = client.get(
         "/api/analysis/AAPL",

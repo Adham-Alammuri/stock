@@ -238,7 +238,7 @@ class StockAnalyzer:
         # Get volatility (handle potential errors)
         try:
             _, vol_series = self.calculate_volatility()
-            features['vol'] = vol_series.fillna(method='ffill')
+            features['vol'] = vol_series.ffill()
         except Exception as e:
             features['vol'] = 0
             print(f"Error calculating volatility: {e}")
@@ -262,14 +262,14 @@ class StockAnalyzer:
             features['bb_position'] = 0.5  # Neutral position
         
         # Volume features
-        features['dollar_volume'] = self.calculate_dollar_volume().fillna(method='ffill')
+        features['dollar_volume'] = self.calculate_dollar_volume().ffill()
         features['relative_volume'] = self.calculate_relative_volume().fillna(1)
         
         # Volatility
-        features['garman_klass_vol'] = self.calculate_garman_klass_volatility().fillna(method='ffill')
+        features['garman_klass_vol'] = self.calculate_garman_klass_volatility().ffill()
         
         # Forward fill any remaining NaNs and drop any that still exist
-        features = features.fillna(method='ffill').fillna(method='bfill')
+        features = features.ffill().bfill()
         
         # Ensure we have enough valid data
         if len(features.dropna()) < 20:  # Minimum required for meaningful clustering
