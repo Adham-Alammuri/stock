@@ -11,7 +11,10 @@ class ChartResponse(BaseModel):
     success: bool
     data: dict
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/api/visualization",
+    tags=["visualization"]
+)
 
 @router.get("/{ticker}/chart", response_model=ChartResponse)
 async def get_chart_data(

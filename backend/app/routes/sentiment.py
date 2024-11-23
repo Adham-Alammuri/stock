@@ -2,8 +2,10 @@ from fastapi import APIRouter, HTTPException, Header
 from app.services.sentiment_data import SentimentDataFetcher, SentimentProcessor
 from datetime import datetime, timedelta
 
-router = APIRouter()
-
+router = APIRouter(
+    prefix="/api/sentiment",
+    tags=["sentiment"]
+)
 @router.get("/{ticker}/analyze")
 async def analyze_sentiment(
     ticker: str,

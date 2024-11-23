@@ -6,7 +6,10 @@ import numpy as np
 from app.services.data_fetcher import fetch_stock_data
 from app.services.data_analyzer import StockAnalyzer
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/api/analysis",
+    tags=["analysis"]
+)
 
 def clean_data_for_json(data):
     """Convert pandas objects to JSON-serializable format, handling NaN values"""

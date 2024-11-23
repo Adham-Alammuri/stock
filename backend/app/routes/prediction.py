@@ -8,7 +8,10 @@ from app.services.data_analyzer import StockAnalyzer
 from app.services.predictor import UnsupervisedStrategyAnalyzer, StockPredictor
 from app.services.visualizer import StockVisualizer
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/api/prediction",
+    tags=["prediction"]
+)
 
 def calculate_strategy_metrics(predictions: pd.Series, returns: pd.Series) -> Dict:
     """Calculate strategy performance metrics with proper return scaling"""
