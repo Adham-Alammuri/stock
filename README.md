@@ -43,7 +43,11 @@ Backend:
 - yfinance for market data
 - NumPy for numerical computations
 
+## Live site example
+Website: [Stock Analysis](https://stock.adhamalammuri.com/) 
+
 ## Getting Started
+
 
 ### Prerequisites
 - Node.js (Latest LTS version)
@@ -123,7 +127,6 @@ Visit `http://localhost:5173` in your browser.
 ## Contact
 
 Adham Alammuri
-- Website: [adhamalammuri.com](https://www.adhamalammuri.com)
 - LinkedIn: [Adham Alammuri](https://www.linkedin.com/in/adham-alammuri-38b684214)
 
 ## Notes
