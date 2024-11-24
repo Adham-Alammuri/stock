@@ -141,6 +141,7 @@ function App() {
                 <div>
                   <label className="block text-sm mb-1">Start Date</label>
                   <DatePicker
+                    placeholderText="MM-DD-YYYY"
                     selected={formState.startDate}
                     onChange={(date) => handleInputChange('startDate', date)}
                     className="p-2 border rounded"
@@ -150,6 +151,7 @@ function App() {
                 <div>
                   <label className="block text-sm mb-1">End Date</label>
                   <DatePicker
+                    placeholderText="MM-DD-YYYY"
                     selected={formState.endDate}
                     onChange={(date) => handleInputChange('endDate', date)}
                     className="p-2 border rounded"

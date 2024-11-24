@@ -61,7 +61,7 @@ const ApiKeyManager = ({ onApiKeyChange }) => {
 
   return (
     <div className="mb-6 bg-white rounded-lg shadow-md p-6">
-      <h2 className="text-xl font-semibold mb-4">Alpha Vantage API Key Required</h2>
+      <h2 className="text-xl font-semibold mb-4">Alpha Vantage API Key (Optional)</h2>
       <div className="space-y-4">
         <div className="bg-blue-50 border border-blue-200 rounded p-4 text-sm text-blue-700">
           To use sentiment analysis features, please provide your Alpha Vantage API key. 
