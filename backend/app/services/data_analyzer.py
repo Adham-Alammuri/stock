@@ -22,12 +22,17 @@ class StockAnalyzer:
         if data.empty:
             raise ValueError("Data is empty")
         
+        self.data = data.copy()
+        
+        # Fix for new yfinance format
+        self._fix_multiindex_data()
+        
+        # Now check for required columns after fixing the format
         self.required_columns = ['Open', 'High', 'Low', 'Close', 'Volume']
-        missing_columns = [col for col in self.required_columns if col not in data.columns]
+        missing_columns = [col for col in self.required_columns if col not in self.data.columns]
         if missing_columns:
             raise ValueError(f"Missing required columns: {missing_columns}")
         
-        self.data = data.copy()
         self.start_date = start_date
         self.end_date = end_date
 
@@ -276,3 +281,23 @@ class StockAnalyzer:
             raise ValueError("Not enough valid data points for clustering")
             
         return features.dropna()
+    
+    def _fix_multiindex_data(self):
+        """
+        Fix for new yfinance data format that returns MultiIndex columns.
+        """
+        if isinstance(self.data.columns, pd.MultiIndex):
+            print("Fixing MultiIndex data format from yfinance...")
+            
+            ticker = self.data.columns.get_level_values('Ticker')[0]
+            
+            fixed_data = pd.DataFrame(index=self.data.index)
+            
+            for col in ['Open', 'High', 'Low', 'Close', 'Volume']:
+                if (col, ticker) in self.data.columns:
+                    fixed_data[col] = self.data[(col, ticker)]
+            
+            if ('Adj Close', ticker) in self.data.columns:
+                fixed_data['Adj Close'] = self.data[('Adj Close', ticker)]
+            
+            self.data = fixed_data

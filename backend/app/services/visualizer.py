@@ -123,40 +123,72 @@ class StockVisualizer:
     def prepare_chart_data(self, indicators=None):
         """
         Combined preparation method for all chart data including price, volume, and all indicators.
-        
-        Args:
-            indicators: Optional list of indicators (kept for backwards compatibility)
-            
-        Returns:
-            Dictionary containing all chart data and indicators
         """
-        data = {
-            'dates': self.analyzer.data.index.strftime('%Y-%m-%d').tolist(),
-            'ohlc': self.analyzer.data[['Open', 'High', 'Low', 'Close']].values.tolist(),
-            'volume': self.analyzer.data['Volume'].tolist(),
-            'indicators': {}
+        try:
+            # Check if data exists and has expected columns
+            if self.analyzer.data is None or self.analyzer.data.empty:
+                print("Warning: Analyzer data is None or empty")
+                return self._get_empty_data_structure()
+            
+            missing_columns = [col for col in ['Open', 'High', 'Low', 'Close', 'Volume'] 
+                              if col not in self.analyzer.data.columns]
+            if missing_columns:
+                print(f"Warning: Missing required columns: {missing_columns}")
+                return self._get_empty_data_structure()
+            
+            data = self._get_empty_data_structure()
+            
+            # Convert dates to strings
+            data['dates'] = [d.strftime('%Y-%m-%d') for d in self.analyzer.data.index]
+            
+            # Convert OHLC data
+            data['ohlc'] = self.analyzer.data[['Open', 'High', 'Low', 'Close']].values.tolist()
+            
+            # Convert volume 
+            data['volume'] = self.analyzer.data['Volume'].fillna(0).values.tolist()
+            
+            # Calculate RSI
+            try:
+                rsi = self.analyzer.calculate_rsi()
+                data['indicators']['rsi']['values'] = rsi.fillna(0).values.tolist()
+            except Exception as e:
+                print(f"Error calculating RSI: {str(e)}")
+            
+            # Calculate SMAs
+            try:
+                sma20 = self.analyzer.calculate_sma(20)
+                sma50 = self.analyzer.calculate_sma(50)
+                data['indicators']['sma']['sma20'] = sma20.fillna(0).values.tolist()
+                data['indicators']['sma']['sma50'] = sma50.fillna(0).values.tolist()
+            except Exception as e:
+                print(f"Error calculating SMAs: {str(e)}")
+            
+            # Calculate Bollinger Bands
+            try:
+                bb = self.analyzer.calculate_bollinger_bands()
+                data['indicators']['bollinger']['upper'] = bb['BB_Upper'].fillna(0).values.tolist()
+                data['indicators']['bollinger']['middle'] = bb['BB_Middle'].fillna(0).values.tolist()
+                data['indicators']['bollinger']['lower'] = bb['BB_Lower'].fillna(0).values.tolist()
+            except Exception as e:
+                print(f"Error calculating Bollinger Bands: {str(e)}")
+            
+            return data
+        except Exception as e:
+            print(f"Critical error in prepare_chart_data: {str(e)}")
+            return self._get_empty_data_structure()
+    
+    def _get_empty_data_structure(self):
+        """Helper method to create an empty data structure"""
+        return {
+            'dates': [],
+            'ohlc': [],
+            'volume': [],
+            'indicators': {
+                'rsi': {'values': []},
+                'sma': {'sma20': [], 'sma50': []},
+                'bollinger': {'upper': [], 'middle': [], 'lower': []}
+            }
         }
-
-        # RSI
-        data['indicators']['rsi'] = {
-            'values': self.analyzer.calculate_rsi().tolist()
-        }
-
-        # Moving Averages
-        data['indicators']['sma'] = {
-            'sma20': self.analyzer.calculate_sma(20).tolist(),
-            'sma50': self.analyzer.calculate_sma(50).tolist()
-        }
-
-        # Bollinger Bands
-        bb = self.analyzer.calculate_bollinger_bands()
-        data['indicators']['bollinger'] = {
-            'upper': bb['BB_Upper'].tolist(),
-            'middle': bb['BB_Middle'].tolist(),
-            'lower': bb['BB_Lower'].tolist()
-        }
-
-        return data
         
     def plot_technical_analysis(self, indicators: List[str] = ['sma', 'ema', 'bb', 'rsi'], output_format: str = 'matplotlib') -> Union[None, Dict]:
         """
@@ -221,6 +253,11 @@ class StockVisualizer:
             return fig
         else:
             return self._prepare_technical_data(indicators)
+            
+    def _prepare_technical_data(self, indicators):
+        """Helper method to prepare technical data for web usage"""
+        data = self.prepare_chart_data()
+        return data
     
     def plot_clustering_analysis(self, clusters, returns, features: Optional[pd.DataFrame] = None) -> Dict:
         """
@@ -236,57 +273,118 @@ class StockVisualizer:
         """
         plot_data = []
         
-        for cluster in range(clusters.max() + 1):
-            mask = clusters == cluster
-            cluster_returns = returns[mask]
-            
-            cluster_info = {
-                'cluster': int(cluster),
-                'dates': returns.index[mask].strftime('%Y-%m-%d').tolist(),
-                'returns': cluster_returns.tolist(),
-                'mean_return': float(cluster_returns.mean()),
-                'total_points': int(mask.sum()),
-                'metrics': {
-                    'sharpe': float(cluster_returns.mean() / cluster_returns.std()) if cluster_returns.std() != 0 else 0,
-                    'win_rate': float((cluster_returns > 0).mean()),
-                    'volatility': float(cluster_returns.std() * np.sqrt(252))
-                }
-            }
-            
-            # Add feature analysis if features are provided
-            if features is not None:
-                cluster_features = features[mask]
-                cluster_info['features'] = {
-                    'rsi': {
-                        'mean': float(cluster_features['rsi'].mean()),
-                        'range': [
-                            float(cluster_features['rsi'].min()),
-                            float(cluster_features['rsi'].max())
-                        ]
-                    },
-                    'volatility': {
-                        'mean': float(cluster_features['vol'].mean()),
-                        'range': [
-                            float(cluster_features['vol'].min()),
-                            float(cluster_features['vol'].max())
-                        ]
+        try:
+            for cluster in range(clusters.max() + 1):
+                mask = clusters == cluster
+                cluster_returns = returns[mask]
+                
+                if len(cluster_returns) == 0:
+                    continue
+                
+                # Convert index dates to string format 
+                try:
+                    dates = returns.index[mask].strftime('%Y-%m-%d').values.tolist()
+                except:
+                    dates = [str(d) for d in returns.index[mask]]
+                
+                # Convert return values to list 
+                try:
+                    return_values = cluster_returns.values.values.tolist()
+                except:
+                    return_values = cluster_returns.values.tolist()
+                
+                # Handle calculation of metrics
+                sharpe = 0
+                if cluster_returns.std() != 0:
+                    sharpe = float(cluster_returns.mean() / cluster_returns.std())
+                
+                win_rate = 0
+                try:
+                    win_rate = float((cluster_returns > 0).mean())
+                except:
+                    pass
+                
+                volatility = 0
+                try:
+                    volatility = float(cluster_returns.std() * np.sqrt(252))
+                except:
+                    pass
+                
+                cluster_info = {
+                    'cluster': int(cluster),
+                    'dates': dates,
+                    'returns': return_values,
+                    'mean_return': float(cluster_returns.mean()),
+                    'total_points': int(mask.sum()),
+                    'metrics': {
+                        'sharpe': sharpe,
+                        'win_rate': win_rate,
+                        'volatility': volatility
                     }
                 }
+                
+                # Add feature analysis if features are provided
+                if features is not None:
+                    cluster_features = features[mask]
+                    if 'rsi' in cluster_features.columns and 'vol' in cluster_features.columns:
+                        cluster_info['features'] = {
+                            'rsi': {
+                                'mean': float(cluster_features['rsi'].mean()),
+                                'range': [
+                                    float(cluster_features['rsi'].min()),
+                                    float(cluster_features['rsi'].max())
+                                ]
+                            },
+                            'volatility': {
+                                'mean': float(cluster_features['vol'].mean()),
+                                'range': [
+                                    float(cluster_features['vol'].min()),
+                                    float(cluster_features['vol'].max())
+                                ]
+                            }
+                        }
+                
+                plot_data.append(cluster_info)
+                
+            start_date = returns.index.min()
+            end_date = returns.index.max()
             
-            plot_data.append(cluster_info)
-        
-        return {
-            'plot_type': 'cluster_analysis',
-            'data': plot_data,
-            'metadata': {
-                'total_clusters': int(clusters.max() + 1),
-                'total_points': len(returns),
-                'period': {
-                    'start': returns.index.min().strftime('%Y-%m-%d'),
-                    'end': returns.index.max().strftime('%Y-%m-%d')
+            try:
+                start_date_str = start_date.strftime('%Y-%m-%d')
+            except:
+                start_date_str = str(start_date)
+                
+            try:
+                end_date_str = end_date.strftime('%Y-%m-%d')
+            except:
+                end_date_str = str(end_date)
+            
+            return {
+                'plot_type': 'cluster_analysis',
+                'data': plot_data,
+                'metadata': {
+                    'total_clusters': int(clusters.max() + 1),
+                    'total_points': len(returns),
+                    'period': {
+                        'start': start_date_str,
+                        'end': end_date_str
+                    }
                 }
             }
-        }
+        except Exception as e:
+            print(f"Error in plot_clustering_analysis: {str(e)}")
+            return {
+                'plot_type': 'cluster_analysis',
+                'data': [],
+                'metadata': {
+                    'total_clusters': 0,
+                    'total_points': 0,
+                    'period': {
+                        'start': '',
+                        'end': ''
+                    }
+                }
+            }
         
     def generate_performance_dashboard(self, metrics: Dict) -> Dict:
         """
@@ -298,34 +396,62 @@ class StockVisualizer:
         Returns:
             Dictionary with dashboard data for web rendering
         """
-        return {
-            'dashboard_type': 'strategy_performance',
-            'metrics': {
-                'returns': {
-                    'value': float(metrics['mean_return']),
-                    'formatted': f"{metrics['mean_return']:.2%}",
-                    'label': 'Average Return'
+        try:
+            try:
+                dates = metrics['return_series'].index.strftime('%Y-%m-%d').values.tolist()
+            except:
+                dates = [str(d) for d in metrics['return_series'].index]
+            
+            try:
+                values = metrics['cumulative_returns'].values.tolist()
+            except:
+                values = metrics['cumulative_returns'].values.tolist()
+            
+            return {
+                'dashboard_type': 'strategy_performance',
+                'metrics': {
+                    'returns': {
+                        'value': float(metrics['mean_return']),
+                        'formatted': f"{metrics['mean_return']:.2%}",
+                        'label': 'Average Return'
+                    },
+                    'sharpe': {
+                        'value': float(metrics['sharpe_ratio']),
+                        'formatted': f"{metrics['sharpe_ratio']:.2f}",
+                        'label': 'Sharpe Ratio'
+                    },
+                    'win_rate': {
+                        'value': float(metrics['win_rate']),
+                        'formatted': f"{metrics['win_rate']:.2%}",
+                        'label': 'Win Rate'
+                    },
+                    'max_drawdown': {
+                        'value': float(metrics['max_drawdown']),
+                        'formatted': f"{metrics['max_drawdown']:.2%}",
+                        'label': 'Maximum Drawdown'
+                    }
                 },
-                'sharpe': {
-                    'value': float(metrics['sharpe_ratio']),
-                    'formatted': f"{metrics['sharpe_ratio']:.2f}",
-                    'label': 'Sharpe Ratio'
-                },
-                'win_rate': {
-                    'value': float(metrics['win_rate']),
-                    'formatted': f"{metrics['win_rate']:.2%}",
-                    'label': 'Win Rate'
-                },
-                'max_drawdown': {
-                    'value': float(metrics['max_drawdown']),
-                    'formatted': f"{metrics['max_drawdown']:.2%}",
-                    'label': 'Maximum Drawdown'
-                }
-            },
-            'chart_data': {
-                'cumulative_returns': {
-                    'dates': metrics['return_series'].index.strftime('%Y-%m-%d').tolist(),
-                    'values': metrics['cumulative_returns'].tolist()
+                'chart_data': {
+                    'cumulative_returns': {
+                        'dates': dates,
+                        'values': values
+                    }
                 }
             }
-        }
+        except Exception as e:
+            print(f"Error in generate_performance_dashboard: {str(e)}")
+            return {
+                'dashboard_type': 'strategy_performance',
+                'metrics': {
+                    'returns': {'value': 0, 'formatted': '0.00%', 'label': 'Average Return'},
+                    'sharpe': {'value': 0, 'formatted': '0.00', 'label': 'Sharpe Ratio'},
+                    'win_rate': {'value': 0, 'formatted': '0.00%', 'label': 'Win Rate'},
+                    'max_drawdown': {'value': 0, 'formatted': '0.00%', 'label': 'Maximum Drawdown'}
+                },
+                'chart_data': {
+                    'cumulative_returns': {
+                        'dates': [],
+                        'values': []
+                    }
+                }
+            }
