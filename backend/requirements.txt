@@ -1,7 +1,7 @@
 # Python version >= 3.12.6
 numpy>=1.24.0
 pandas>=2.0.0
-yfinance>=0.2.43
+yfinance==0.2.64  # Latest version as of June 2025
 matplotlib>=3.7.0
 mplfinance>=0.12.10b0  
 typing-extensions>=4.0.0  
